@@ -1,15 +1,15 @@
 #!/usr/bin/env nextflow
 
-params.in = "$baseDir/fastq/*.fastq.gz"
-params.out = "$HOME/refnaap_nf_out"
-params.reference = "$baseDir/reference/Americas2.fasta"
-params.model = "r10_min_high_g303"
-params.size = 50
-params.left = 25
-params.right = 25
+//params.in = "$baseDir/fastq/*.fastq.gz"
+//params.out = "$HOME/refnaap_nf_out"
+//params.reference = "$baseDir/reference/Americas2.fasta"
+//params.model = "r10_min_high_g303"
+//params.size = 50
+//params.left = 25
+//params.right = 25
 
-AmericansN = file("$baseDir/reference/AmericasN.bed")
-AmericansG = file("$baseDir/reference/AmericasG.bed")
+//AmericansN = file("$baseDir/reference/AmericasN.bed")
+//AmericansG = file("$baseDir/reference/AmericasG.bed")
 
 ref = file(params.reference)
 model = params.model
@@ -22,6 +22,7 @@ process seqtk_trim_filter {
 
     //errorStrategy 'ignore'
     //publishDir params.out, mode: 'copy', overwrite: true
+    memory '7 GB'
 
     input:
     tuple name, file(fastq) from fastq_files2
@@ -40,6 +41,8 @@ process fastqc {
     
     //errorStrategy 'ignore'
     //publishDir params.out, mode: 'copy', overwrite: true
+    memory '7 GB' 
+
 
     input:
     set val(name), file(fastq) from fastq_files1 
@@ -58,6 +61,7 @@ process multiqc {
 
     //errorStrategy 'ignore'
     publishDir params.out, mode: 'copy', overwrite: true
+    memory '7 GB'
 
     input:
     file reports  from qc_files.collect().ifEmpty([])
@@ -74,6 +78,7 @@ process minimap2 {
 
     errorStrategy 'ignore'
     //publishDir params.out, mode: 'copy', overwrite: true
+    memory '7 GB'
 
     input:
     tuple val(name), file(fastq) from fastq_filtered
@@ -90,13 +95,14 @@ process samtools {
 
     errorStrategy 'ignore'
     publishDir params.out, pattern: "*_cov.txt", mode: 'copy', overwrite: true
+    memory '7 GB'
 
     input:
     tuple file(fastq), file(sam_file)from sam_files
 
     output:
     tuple file(fastq), path("${sam_file.simpleName}.coverage") into coverage_files
-    path("${sam_file.simpleName}_cov.txt") into coverage_stat 
+    //path("${sam_file.simpleName}_cov.txt") into coverage_stat 
 
     """
     samtools view -S -b ${sam_file.simpleName}.sam > ${sam_file.simpleName}.bam
@@ -111,6 +117,7 @@ process scaffold {
 
     errorStrategy 'ignore'
     //publishDir params.out, pattern: "${coverage_file.simpleName}_cov.txt", mode: 'copy', overwrite: true
+    memory '7 GB'
 
     input:
     tuple file(fastq), file(coverage_file) from coverage_files
@@ -128,6 +135,7 @@ process medaka {
 
     errorStrategy 'ignore'
 //    publishDir params.out, mode: 'copy', overwrite: true
+    memory '7 GB'
 
     input:
     tuple file(fastq), file(scaffold_file) from scaffold_files
@@ -144,6 +152,7 @@ process gapfixer {
 
     errorStrategy 'ignore'
     //publishDir params.out, mode: 'copy', overwrite: true
+    memory '7 GB'
 
     input:
     tuple file(fastq), file(scaffold_file), file(medaka_file) from medaka_files
@@ -161,6 +170,7 @@ process consensus_call {
 
     //errorStrategy 'ignore'
     publishDir params.out, mode: 'copy', overwrite: true
+    memory '7 GB'
 
     input:
     tuple file(fastq), file(scaffold_file) from final_files
