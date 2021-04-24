@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 
 //params.in = "$baseDir/fastq/*.fastq.gz"
-//params.out = "$HOME/refnaap_nf_out"
+//params.out = "$HOME/eefnaap_nf_out"
 //params.reference = "$baseDir/reference/Americas2.fasta"
 //params.model = "r10_min_high_g303"
 //params.size = 50
@@ -11,7 +11,7 @@
 //AmericansN = file("$baseDir/reference/AmericasN.bed")
 //AmericansG = file("$baseDir/reference/AmericasG.bed")
 
-ref = file(params.reference)
+reference = Channel.fromPath(params.reference).into{ reference1; reference2 }
 model = params.model
 fastq_files = Channel.fromPath(params.in, type: 'file').map { file -> tuple(file.simpleName, file) }
 fastq_files.into { fastq_files1; fastq_files2 }
@@ -82,6 +82,7 @@ process minimap2 {
 
     input:
     tuple val(name), file(fastq) from fastq_filtered
+    file ref from reference1.first()
 
     output:
     tuple file(fastq), file("${fastq.simpleName}.sam") into sam_files
@@ -121,6 +122,7 @@ process scaffold {
 
     input:
     tuple file(fastq), file(coverage_file) from coverage_files
+    file ref from reference2.first()
 
     output:
     tuple file(fastq), path("${coverage_file.simpleName}_scaffold.fasta") into scaffold_files
