@@ -16,13 +16,16 @@ model = params.model
 fastq_files = Channel.fromPath(params.in, type: 'file').map { file -> tuple(file.simpleName, file) }
 fastq_files.into { fastq_files1; fastq_files2 }
 
+scaffold_cutter_ch = Channel.fromPath("$baseDir/scaffold_cutter.R")
+gapfixer_ch = Channel.fromPath("$baseDir/gapfixer.R")
+
 //fastq_files2.view()
 
 process seqtk_trim_filter {
 
     //errorStrategy 'ignore'
     //publishDir params.out, mode: 'copy', overwrite: true
-    memory '7 GB'
+    memory '3 GB'
 
     input:
     tuple name, file(fastq) from fastq_files2
@@ -41,7 +44,7 @@ process fastqc {
     
     //errorStrategy 'ignore'
     //publishDir params.out, mode: 'copy', overwrite: true
-    memory '7 GB' 
+    memory '3 GB' 
 
 
     input:
@@ -61,7 +64,7 @@ process multiqc {
 
     //errorStrategy 'ignore'
     publishDir params.out, mode: 'copy', overwrite: true
-    memory '7 GB'
+    memory '3 GB'
 
     input:
     file reports  from qc_files.collect().ifEmpty([])
@@ -123,13 +126,14 @@ process scaffold {
     input:
     tuple file(fastq), file(coverage_file) from coverage_files
     file ref from reference2.first()
+    file(scaffold_cutter) from scaffold_cutter_ch.first()
 
     output:
     tuple file(fastq), path("${coverage_file.simpleName}_scaffold.fasta") into scaffold_files
     path "${coverage_file.simpleName}_cov.txt" into cov_stat_files
 
     """
-    $baseDir/scaffold_cutter.R 1 10 $ref ${coverage_file.simpleName}.coverage ${coverage_file.simpleName}_scaffold.fasta ${coverage_file.simpleName}_cov.txt   
+    Rscript $scaffold_cutter 1 10 $ref ${coverage_file.simpleName}.coverage ${coverage_file.simpleName}_scaffold.fasta ${coverage_file.simpleName}_cov.txt   
     """
 }
 
@@ -158,12 +162,13 @@ process gapfixer {
 
     input:
     tuple file(fastq), file(scaffold_file), file(medaka_file) from medaka_files
+    file(gapfixer) from gapfixer_ch.first()
 
     output:
     tuple file(fastq), path("${scaffold_file.simpleName}_gapfixed.fasta") into final_files
 
     """
-    $baseDir/gapfixer.R $scaffold_file $medaka_file ${scaffold_file.simpleName}_gapfixed.fasta
+    Rscript $gapfixer $scaffold_file $medaka_file ${scaffold_file.simpleName}_gapfixed.fasta
     """
 }
 
