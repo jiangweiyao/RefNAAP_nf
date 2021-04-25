@@ -19,7 +19,20 @@ fastq_files.into { fastq_files1; fastq_files2 }
 scaffold_cutter_ch = Channel.fromPath("$baseDir/scaffold_cutter.R")
 gapfixer_ch = Channel.fromPath("$baseDir/gapfixer.R")
 
-//fastq_files2.view()
+
+println """\
+         RabiesRefNAAP     NEXTFLOW      PIPELINE   
+         =====================================================
+         input reads (--in)                  : ${params.in}
+         outdir (--out)                      : ${params.out}
+         reference file (--reference)        : ${params.reference}
+         medaka model (--model)              : ${params.model}
+         Minimum read length (--size)        : ${params.size}
+         Trim left n bases (--left)          : ${params.left}
+         Trim right n bases (--right)        : ${params.right}
+         """
+         .stripIndent()
+
 
 process seqtk_trim_filter {
 
@@ -183,13 +196,14 @@ process consensus_call {
     tuple file(fastq), file(scaffold_file) from final_files
 
     output:
-    //path("${fastq.simpleName}_final.fasta") into consensus_output
-    path("${fastq.simpleName}_medaka3") into consensus_output
+    path("${fastq.simpleName}_final.fasta") into consensus_output
+    //path("${fastq.simpleName}_medaka3") into consensus_output
     """
     medaka_consensus -i $fastq -d $scaffold_file -o ${fastq.simpleName}_medaka2 -m $model
     bcftools mpileup -f $scaffold_file ${fastq.simpleName}_medaka2/calls_to_draft.bam | bcftools call -mv -Oz -o ${fastq.simpleName}.vcf.gz --ploidy 1
     bcftools index ${fastq.simpleName}.vcf.gz
     cat $scaffold_file | bcftools consensus ${fastq.simpleName}.vcf.gz -H 1 > ${fastq.simpleName}_int.fasta
     medaka_consensus -i $fastq -d ${fastq.simpleName}_int.fasta -o ${fastq.simpleName}_medaka3 -m $model
+    cp ${fastq.simpleName}_medaka3/consensus.fasta ${fastq.simpleName}_final.fasta
     """
 }
